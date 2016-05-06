@@ -4847,10 +4847,6 @@ public:
     // Target identification.
     Builder.defineMacro("__arm");
     Builder.defineMacro("__arm__");
-    // For bare-metal none-eabi.
-    if (getTriple().getOS() == llvm::Triple::UnknownOS &&
-        getTriple().getEnvironment() == llvm::Triple::EABI)
-      Builder.defineMacro("__ELF__");
 
     // Target properties.
     Builder.defineMacro("__REGISTER_PREFIX__", "");
@@ -5940,22 +5936,11 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__QDSP6_V5__");
       Builder.defineMacro("__QDSP6_ARCH__", "5");
     }
-  } else if (CPU == "hexagonv55") {
-    Builder.defineMacro("__HEXAGON_V55__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "55");
-    Builder.defineMacro("__QDSP6_V55__");
-    Builder.defineMacro("__QDSP6_ARCH__", "55");
   } else if (CPU == "hexagonv60") {
     Builder.defineMacro("__HEXAGON_V60__");
     Builder.defineMacro("__HEXAGON_ARCH__", "60");
     Builder.defineMacro("__QDSP6_V60__");
     Builder.defineMacro("__QDSP6_ARCH__", "60");
-  }
-
-  if (hasFeature("hvx")) {
-    Builder.defineMacro("__HVX__");
-    if (hasFeature("hvx-double"))
-      Builder.defineMacro("__HVXDBL__");
   }
 }
 

@@ -14,9 +14,9 @@
 // CHECK-NEXT: foo9'bar9'zed9
 // CHECK-NEXT: foo10"bar10"zed10
 // CHECK: bar
-// CHECK: zed1
+// CHECK: zed12
 // CHECK: one\two
-// CHECK: c:foobar.c
+// CHECK: c:\foo\bar.c
 
 foo1
 foo2

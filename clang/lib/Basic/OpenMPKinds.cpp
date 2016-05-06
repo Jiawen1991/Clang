@@ -235,6 +235,18 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
     default:
       break;
     }
+    //homp
+    case OMPC_device:
+      switch (Type) {
+        case OMPC_DEVICE_unknown:
+          return "unknown";
+#define OPENMP_DEVICE_KIND(Name)                                                \
+  case OMPC_DEVICE_##Name:                                                      \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+        default:
+          break;
+      }
     llvm_unreachable("Invalid OpenMP 'map' clause type");
   case OMPC_dist_schedule:
     switch (Type) {
@@ -286,7 +298,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
-  case OMPC_device:
+  //case OMPC_device:
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_num_teams:

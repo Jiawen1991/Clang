@@ -466,8 +466,13 @@ void OMPClauseProfiler::VisitOMPFlushClause(const OMPFlushClause *C) {
 void OMPClauseProfiler::VisitOMPDependClause(const OMPDependClause *C) {
   VisitOMPClauseList(C);
 }
+/*
 void OMPClauseProfiler::VisitOMPDeviceClause(const OMPDeviceClause *C) {
   Profiler->VisitStmt(C->getDevice());
+}
+*/
+void OMPClauseProfiler::VisitOMPDeviceClause(const OMPDeviceClause *C) {
+      VisitOMPClauseList(C);
 }
 void OMPClauseProfiler::VisitOMPMapClause(const OMPMapClause *C) {
   VisitOMPClauseList(C);

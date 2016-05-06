@@ -36,21 +36,13 @@ namespace {
     const CodeGenOptions CodeGenOpts;  // Intentionally copied in.
 
     unsigned HandlingTopLevelDecls;
-
-    /// Use this when emitting decls to block re-entrant decl emission. It will
-    /// emit all deferred decls on scope exit. Set EmitDeferred to false if decl
-    /// emission must be deferred longer, like at the end of a tag definition.
     struct HandlingTopLevelDeclRAII {
       CodeGeneratorImpl &Self;
-      bool EmitDeferred;
-      HandlingTopLevelDeclRAII(CodeGeneratorImpl &Self,
-                               bool EmitDeferred = true)
-          : Self(Self), EmitDeferred(EmitDeferred) {
+      HandlingTopLevelDeclRAII(CodeGeneratorImpl &Self) : Self(Self) {
         ++Self.HandlingTopLevelDecls;
       }
       ~HandlingTopLevelDeclRAII() {
-        unsigned Level = --Self.HandlingTopLevelDecls;
-        if (Level == 0 && EmitDeferred)
+        if (--Self.HandlingTopLevelDecls == 0)
           Self.EmitDeferredDecls();
       }
     };
@@ -193,10 +185,6 @@ namespace {
       if (Diags.hasErrorOccurred())
         return;
 
-      // Don't allow re-entrant calls to CodeGen triggered by PCH
-      // deserialization to emit deferred decls.
-      HandlingTopLevelDeclRAII HandlingDecl(*this, /*EmitDeferred=*/false);
-
       Builder->UpdateCompletedType(D);
 
       // For MSVC compatibility, treat declarations of static data members with
@@ -225,10 +213,6 @@ namespace {
     void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
       if (Diags.hasErrorOccurred())
         return;
-
-      // Don't allow re-entrant calls to CodeGen triggered by PCH
-      // deserialization to emit deferred decls.
-      HandlingTopLevelDeclRAII HandlingDecl(*this, /*EmitDeferred=*/false);
 
       if (CodeGen::CGDebugInfo *DI = Builder->getModuleDebugInfo())
         if (const RecordDecl *RD = dyn_cast<RecordDecl>(D))

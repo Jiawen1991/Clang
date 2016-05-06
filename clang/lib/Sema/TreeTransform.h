@@ -1650,14 +1650,27 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
+        /*
   OMPClause *RebuildOMPDeviceClause(Expr *Device, SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc) {
     return getSema().ActOnOpenMPDeviceClause(Device, StartLoc, LParenLoc,
                                              EndLoc);
   }
+       */
+        OMPClause *RebuildOMPDeviceClause(OpenMPDeviceClauseKind DeviceTypeModifier,
+                                          OpenMPDeviceClauseKind DeviceType, bool IsDeviceTypeImplicit,
+                                          SourceLocation DeviceLoc, SourceLocation ColonLoc,
+                                          ArrayRef<Expr *> VarList,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc) {
+          return getSema().ActOnOpenMPDeviceClause(DeviceTypeModifier, DeviceType,
+                                                   IsDeviceTypeImplicit, DeviceLoc, ColonLoc,
+                                                   VarList, StartLoc, LParenLoc, EndLoc);
+        }
 
-  /// \brief Build a new OpenMP 'map' clause.
+        /// \brief Build a new OpenMP 'map' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
@@ -7924,6 +7937,7 @@ TreeTransform<Derived>::TransformOMPDependClause(OMPDependClause *C) {
 }
 
 template <typename Derived>
+/*
 OMPClause *
 TreeTransform<Derived>::TransformOMPDeviceClause(OMPDeviceClause *C) {
   ExprResult E = getDerived().TransformExpr(C->getDevice());
@@ -7932,6 +7946,21 @@ TreeTransform<Derived>::TransformOMPDeviceClause(OMPDeviceClause *C) {
   return getDerived().RebuildOMPDeviceClause(
       E.get(), C->getLocStart(), C->getLParenLoc(), C->getLocEnd());
 }
+*/
+OMPClause *
+TreeTransform<Derived>::TransformOMPDeviceClause(OMPDeviceClause *C) {
+      llvm::SmallVector<Expr *, 16> Vars;
+      Vars.reserve(C->varlist_size());
+      for (auto *VE : C->varlists()) {
+        ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+        if (EVar.isInvalid())
+          return nullptr;
+        Vars.push_back(EVar.get());
+      }
+      return getDerived().RebuildOMPDeviceClause(C->getDeviceTypeModifier(), C->getDeviceType(), C->isImplicitDeviceType(),
+                                                 C->getDeviceLoc(), C->getColonLoc(), Vars, C->getLocStart(),
+                                                 C->getLParenLoc(), C->getLocEnd());
+    }
 
 template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPMapClause(OMPMapClause *C) {

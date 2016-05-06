@@ -25,7 +25,8 @@ from libscanbuild.runner import run
 from libscanbuild.intercept import capture
 from libscanbuild.report import report_directory, document
 from libscanbuild.clang import get_checkers
-from libscanbuild.compilation import split_command
+from libscanbuild.runner import action_check
+from libscanbuild.command import classify_parameters, classify_source
 
 __all__ = ['analyze_build_main', 'analyze_build_wrapper']
 
@@ -106,7 +107,7 @@ def run_analyzer(args, output_dir):
         'output_format': args.output_format,
         'output_failures': args.output_failures,
         'direct_args': analyzer_params(args),
-        'force_debug': args.force_debug
+        'force_analyze_debug_code' : args.force_analyze_debug_code
     }
 
     logging.debug('run analyzer against compilation database')
@@ -139,7 +140,8 @@ def setup_environment(args, destination, bin_dir):
         'ANALYZE_BUILD_REPORT_FORMAT': args.output_format,
         'ANALYZE_BUILD_REPORT_FAILURES': 'yes' if args.output_failures else '',
         'ANALYZE_BUILD_PARAMETERS': ' '.join(analyzer_params(args)),
-        'ANALYZE_BUILD_FORCE_DEBUG': 'yes' if args.force_debug else ''
+        'ANALYZE_BUILD_FORCE_ANALYZE_DEBUG_CODE'
+            : 'yes' if args.force_analyze_debug_code else ''
     })
     return environment
 
@@ -161,34 +163,32 @@ def analyze_build_wrapper(cplusplus):
         return result
     # ... and run the analyzer if all went well.
     try:
-        # check is it a compilation
-        compilation = split_command(sys.argv)
-        if compilation is None:
-            return result
         # collect the needed parameters from environment, crash when missing
-        parameters = {
+        consts = {
             'clang': os.getenv('ANALYZE_BUILD_CLANG'),
             'output_dir': os.getenv('ANALYZE_BUILD_REPORT_DIR'),
             'output_format': os.getenv('ANALYZE_BUILD_REPORT_FORMAT'),
             'output_failures': os.getenv('ANALYZE_BUILD_REPORT_FAILURES'),
             'direct_args': os.getenv('ANALYZE_BUILD_PARAMETERS',
                                      '').split(' '),
-            'force_debug': os.getenv('ANALYZE_BUILD_FORCE_DEBUG'),
+            'force_analyze_debug_code':
+                os.getenv('ANALYZE_BUILD_FORCE_ANALYZE_DEBUG_CODE'),
             'directory': os.getcwd(),
-            'command': [sys.argv[0], '-c'] + compilation.flags
         }
-        # call static analyzer against the compilation
-        for source in compilation.files:
-            parameters.update({'file': source})
+        # get relevant parameters from command line arguments
+        args = classify_parameters(sys.argv)
+        filenames = args.pop('files', [])
+        for filename in (name for name in filenames if classify_source(name)):
+            parameters = dict(args, file=filename, **consts)
             logging.debug('analyzer parameters %s', parameters)
-            current = run(parameters)
+            current = action_check(parameters)
             # display error message from the static analyzer
             if current is not None:
                 for line in current['error_output']:
                     logging.info(line.rstrip())
     except Exception:
         logging.exception("run analyzer inside compiler wrapper failed.")
-    return result
+    return 0
 
 
 def analyzer_params(args):
@@ -208,8 +208,8 @@ def analyzer_params(args):
     if args.store_model:
         result.append('-analyzer-store={0}'.format(args.store_model))
     if args.constraints_model:
-        result.append('-analyzer-constraints={0}'.format(
-            args.constraints_model))
+        result.append(
+            '-analyzer-constraints={0}'.format(args.constraints_model))
     if args.internal_stats:
         result.append('-analyzer-stats')
     if args.analyze_headers:
@@ -457,10 +457,11 @@ def create_parser(from_build_command):
                 the compilation database.""")
     advanced.add_argument(
         '--force-analyze-debug-code',
-        dest='force_debug',
+        dest='force_analyze_debug_code',
         action='store_true',
         help="""Tells analyzer to enable assertions in code even if they were
-                disabled during compilation, enabling more precise results.""")
+                disabled during compilation, enabling more precise
+                results.""")
 
     plugins = parser.add_argument_group('checker options')
     plugins.add_argument(

@@ -227,7 +227,4 @@ int main (int argc, char **argv) {
   return tmain<int, 5>(argc, &argc) + tmain<char, 1>(argv[0][0], argv[0]);
 }
 
-extern template int S<int>::TS;
-extern template char S<char>::TS;
-
 #endif

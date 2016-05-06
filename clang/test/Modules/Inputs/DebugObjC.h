@@ -1,4 +1,3 @@
-// -*- ObjC -*-
 @class FwdDecl;
 
 @interface ObjCClass {
@@ -8,11 +7,6 @@
 - instanceMethodWithInt:(int)i;
 - (struct OpaqueData*) getSomethingOpaque;
 @property int property;
-@end
-
-@interface ObjCClassWithPrivateIVars {
-  int public_ivar;
-}
 @end
 
 @interface ObjCClass (Category)

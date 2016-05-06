@@ -718,11 +718,38 @@ void OMPClausePrinter::VisitOMPThreadsClause(OMPThreadsClause *) {
 
 void OMPClausePrinter::VisitOMPSIMDClause(OMPSIMDClause *) { OS << "simd"; }
 
+#if 0
 void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
+  /*
   OS << "device(";
   Node->getDevice()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
+  */
+  if (!Node->varlist_empty()) {
+    OS << "device";
+    VisitOMPClauseList(Node, '(');
+    OS << ")";
+  }
 }
+#endif 0
+
+//homp
+    void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
+      if (!Node->varlist_empty()) {
+        OS << "device(";
+        if (Node->getDeviceType() != OMPC_DEVICE_unknown) {
+          if (Node->getDeviceTypeModifier() != OMPC_MAP_unknown) {
+            OS << getOpenMPSimpleClauseTypeName(OMPC_device,
+                                                Node->getDeviceTypeModifier());
+            OS << ',';
+          }
+          OS << getOpenMPSimpleClauseTypeName(OMPC_device, Node->getDeviceType());
+          OS << ':';
+        }
+        VisitOMPClauseList(Node, ' ');
+        OS << ")";
+      }
+    }
 
 void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
   OS << "num_teams(";

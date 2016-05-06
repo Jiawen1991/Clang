@@ -4,15 +4,14 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-import libear
 import libscanbuild.clang as sut
-import unittest
+from . import fixtures
 import os.path
 
 
-class GetClangArgumentsTest(unittest.TestCase):
+class GetClangArgumentsTest(fixtures.TestCase):
     def test_get_clang_arguments(self):
-        with libear.TemporaryDirectory() as tmpdir:
+        with fixtures.TempDir() as tmpdir:
             filename = os.path.join(tmpdir, 'test.c')
             with open(filename, 'w') as handle:
                 handle.write('')
@@ -21,8 +20,8 @@ class GetClangArgumentsTest(unittest.TestCase):
                 ['clang', '-c', filename, '-DNDEBUG', '-Dvar="this is it"'],
                 tmpdir)
 
-            self.assertTrue('NDEBUG' in result)
-            self.assertTrue('var="this is it"' in result)
+            self.assertIn('NDEBUG', result)
+            self.assertIn('var="this is it"', result)
 
     def test_get_clang_arguments_fails(self):
         self.assertRaises(
@@ -30,7 +29,7 @@ class GetClangArgumentsTest(unittest.TestCase):
             ['clang', '-###', '-fsyntax-only', '-x', 'c', 'notexist.c'], '.')
 
 
-class GetCheckersTest(unittest.TestCase):
+class GetCheckersTest(fixtures.TestCase):
     def test_get_checkers(self):
         # this test is only to see is not crashing
         result = sut.get_checkers('clang', [])

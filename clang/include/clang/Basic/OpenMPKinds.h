@@ -96,6 +96,15 @@ enum OpenMPMapClauseKind {
   OMPC_MAP_unknown
 };
 
+//homp
+enum OpenMPDeviceClauseKind {
+#define OPENMP_DEVICE_KIND(Name) \
+  OMPC_DEVICE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+        OMPC_DEVICE_unknown
+    };
+
+
 /// \brief OpenMP attributes for 'dist_schedule' clause.
 enum OpenMPDistScheduleClauseKind {
 #define OPENMP_DIST_SCHEDULE_KIND(Name) OMPC_DIST_SCHEDULE_##Name,

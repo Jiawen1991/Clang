@@ -7171,8 +7171,7 @@ public:
   void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                      FunctionDecl *Function,
                                      bool Recursive = false,
-                                     bool DefinitionRequired = false,
-                                     bool AtEndOfTU = false);
+                                     bool DefinitionRequired = false);
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
       const TemplateArgumentList &TemplateArgList,
@@ -7196,8 +7195,7 @@ public:
       const MultiLevelTemplateArgumentList &TemplateArgs);
   void InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
                                      VarDecl *Var, bool Recursive = false,
-                                     bool DefinitionRequired = false,
-                                     bool AtEndOfTU = false);
+                                     bool DefinitionRequired = false);
   void InstantiateStaticDataMemberDefinition(
                                      SourceLocation PointOfInstantiation,
                                      VarDecl *Var,
@@ -8323,7 +8321,7 @@ public:
                           SourceLocation StartLoc, SourceLocation LParenLoc,
                           SourceLocation EndLoc);
   /// \brief Called on well-formed 'device' clause.
-  OMPClause *ActOnOpenMPDeviceClause(Expr *Device, SourceLocation StartLoc,
+  OMPClause *ActOnOpenMPDeviceClause(ArrayRef<Expr *> VarList, SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc);
   /// \brief Called on well-formed 'map' clause.

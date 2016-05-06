@@ -3,7 +3,7 @@
 
 // RUN: %clang -target x86_64-apple-darwin10 \
 // RUN:   -fno-inline -fno-inline-functions -### -fsyntax-only %s 2> %t
-// RUN: FileCheck < %t %s
+// RUN: FileCheck --check-prefix=CHECK < %t %s
 
 // CHECK: clang
 // CHECK: "-fno-inline"

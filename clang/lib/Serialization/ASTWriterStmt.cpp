@@ -2015,32 +2015,34 @@ void OMPClauseWriter::VisitOMPDependClause(OMPDependClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPDeviceClause(OMPDeviceClause *C) {
-  Record.AddStmt(C->getDevice());
+  //Record.AddStmt(C->getDevice());
+  //Record.AddSourceLocation(C->getLParenLoc());
+  //homp
+  /*
+  Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+  */
+  Record.push_back(C->varlist_size());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.push_back(C->getDeviceTypeModifier());
+  Record.push_back(C->getDeviceType());
+  Record.AddSourceLocation(C->getDeviceLoc());
+  Record.AddSourceLocation(C->getColonLoc());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPMapClause(OMPMapClause *C) {
   Record.push_back(C->varlist_size());
-  Record.push_back(C->getUniqueDeclarationsNum());
-  Record.push_back(C->getTotalComponentListNum());
-  Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
   Record.push_back(C->getMapTypeModifier());
   Record.push_back(C->getMapType());
   Record.AddSourceLocation(C->getMapLoc());
   Record.AddSourceLocation(C->getColonLoc());
-  for (auto *E : C->varlists())
-    Record.AddStmt(E);
-  for (auto *D : C->all_decls())
-    Record.AddDeclRef(D);
-  for (auto N : C->all_num_lists())
-    Record.push_back(N);
-  for (auto N : C->all_lists_sizes())
-    Record.push_back(N);
-  for (auto &M : C->all_components()) {
-    Record.AddStmt(M.getAssociatedExpression());
-    Record.AddDeclRef(M.getAssociatedDeclaration());
-  }
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {

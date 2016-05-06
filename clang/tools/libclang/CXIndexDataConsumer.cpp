@@ -1134,7 +1134,7 @@ void CXIndexDataConsumer::translateLoc(SourceLocation Loc,
 
 static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage L);
 static CXIdxEntityCXXTemplateKind
-getEntityKindFromSymbolSubKinds(SymbolSubKindSet K);
+getEntityKindFromSymbolCXXTemplateKind(SymbolCXXTemplateKind K);
 static CXIdxEntityLanguage getEntityLangFromSymbolLang(SymbolLanguage L);
 
 void CXIndexDataConsumer::getEntityInfo(const NamedDecl *D,
@@ -1150,7 +1150,8 @@ void CXIndexDataConsumer::getEntityInfo(const NamedDecl *D,
 
   SymbolInfo SymInfo = getSymbolInfo(D);
   EntityInfo.kind = getEntityKindFromSymbolKind(SymInfo.Kind, SymInfo.Lang);
-  EntityInfo.templateKind = getEntityKindFromSymbolSubKinds(SymInfo.SubKinds);
+  EntityInfo.templateKind =
+    getEntityKindFromSymbolCXXTemplateKind(SymInfo.TemplateKind);
   EntityInfo.lang = getEntityLangFromSymbolLang(SymInfo.Lang);
 
   if (D->hasAttrs()) {
@@ -1290,14 +1291,16 @@ static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage 
 }
 
 static CXIdxEntityCXXTemplateKind
-getEntityKindFromSymbolSubKinds(SymbolSubKindSet K) {
-  if (K & (unsigned)SymbolSubKind::TemplatePartialSpecialization)
+getEntityKindFromSymbolCXXTemplateKind(SymbolCXXTemplateKind K) {
+  switch (K) {
+  case SymbolCXXTemplateKind::NonTemplate: return CXIdxEntity_NonTemplate;
+  case SymbolCXXTemplateKind::Template: return CXIdxEntity_Template;
+  case SymbolCXXTemplateKind::TemplatePartialSpecialization:
     return CXIdxEntity_TemplatePartialSpecialization;
-  if (K & (unsigned)SymbolSubKind::TemplateSpecialization)
+  case SymbolCXXTemplateKind::TemplateSpecialization:
     return CXIdxEntity_TemplateSpecialization;
-  if (K & (unsigned)SymbolSubKind::Generic)
-    return CXIdxEntity_Template;
-  return CXIdxEntity_NonTemplate;
+  }
+  llvm_unreachable("invalid template kind");
 }
 
 static CXIdxEntityLanguage getEntityLangFromSymbolLang(SymbolLanguage L) {

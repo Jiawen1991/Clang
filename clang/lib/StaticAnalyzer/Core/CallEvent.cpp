@@ -177,7 +177,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
     // below for efficiency.
     if (PreserveArgs.count(Idx))
       if (const MemRegion *MR = getArgSVal(Idx).getAsRegion())
-        ETraits.setTrait(MR->getBaseRegion(),
+        ETraits.setTrait(MR->StripCasts(),
                         RegionAndSymbolInvalidationTraits::TK_PreserveContents);
         // TODO: Factor this out + handle the lower level const pointers.
 

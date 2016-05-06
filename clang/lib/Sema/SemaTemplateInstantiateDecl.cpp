@@ -3530,8 +3530,7 @@ TemplateDeclInstantiator::InitMethodInstantiation(CXXMethodDecl *New,
 void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                          FunctionDecl *Function,
                                          bool Recursive,
-                                         bool DefinitionRequired,
-                                         bool AtEndOfTU) {
+                                         bool DefinitionRequired) {
   if (Function->isInvalidDecl() || Function->isDefined())
     return;
 
@@ -3605,16 +3604,6 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       assert(!Recursive);
       PendingInstantiations.push_back(
         std::make_pair(Function, PointOfInstantiation));
-    } else if (Function->getTemplateSpecializationKind()
-                 == TSK_ImplicitInstantiation) {
-      if (AtEndOfTU && !getDiagnostics().hasErrorOccurred()) {
-        Diag(PointOfInstantiation, diag::warn_func_template_missing)
-          << Function;
-        Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
-        if (getLangOpts().CPlusPlus11)
-          Diag(PointOfInstantiation, diag::note_inst_declaration_hint)
-            << Function;
-      }
     }
 
     return;
@@ -3962,7 +3951,7 @@ void Sema::InstantiateStaticDataMemberDefinition(
 
 void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
                                          VarDecl *Var, bool Recursive,
-                                      bool DefinitionRequired, bool AtEndOfTU) {
+                                         bool DefinitionRequired) {
   if (Var->isInvalidDecl())
     return;
 
@@ -4094,16 +4083,6 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
                  == TSK_ExplicitInstantiationDefinition) {
       PendingInstantiations.push_back(
         std::make_pair(Var, PointOfInstantiation));
-    } else if (Var->getTemplateSpecializationKind()
-                 == TSK_ImplicitInstantiation) {
-      // Warn about missing definition at the end of translation unit.
-      if (AtEndOfTU && !getDiagnostics().hasErrorOccurred()) {
-        Diag(PointOfInstantiation, diag::warn_var_template_missing)
-          << Var;
-        Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
-        if (getLangOpts().CPlusPlus11)
-          Diag(PointOfInstantiation, diag::note_inst_declaration_hint) << Var;
-      }
     }
 
     return;
@@ -4873,7 +4852,7 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
       bool DefinitionRequired = Function->getTemplateSpecializationKind() ==
                                 TSK_ExplicitInstantiationDefinition;
       InstantiateFunctionDefinition(/*FIXME:*/Inst.second, Function, true,
-                                    DefinitionRequired, true);
+                                    DefinitionRequired);
       continue;
     }
 
@@ -4914,7 +4893,7 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
     // Instantiate static data member definitions or variable template
     // specializations.
     InstantiateVariableDefinition(/*FIXME:*/ Inst.second, Var, true,
-                                  DefinitionRequired, true);
+                                  DefinitionRequired);
   }
 }
 

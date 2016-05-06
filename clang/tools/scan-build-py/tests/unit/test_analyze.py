@@ -5,3 +5,4 @@
 # License. See LICENSE.TXT for details.
 
 import libscanbuild.analyze as sut
+from . import fixtures

@@ -72,7 +72,7 @@ public:
     SubExprs[LENGTH] = Length;
   }
 
-  /// \brief Create an empty array section expression.
+  /// \brief create an empty array section expression.
   explicit OMPArraySectionExpr(EmptyShell Shell)
       : Expr(OMPArraySectionExprClass, Shell) {}
 

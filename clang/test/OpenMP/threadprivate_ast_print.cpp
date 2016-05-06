@@ -69,5 +69,4 @@ int main () {
   return (foo<int>());
 }
 
-extern template int ST<int>::m;
 #endif

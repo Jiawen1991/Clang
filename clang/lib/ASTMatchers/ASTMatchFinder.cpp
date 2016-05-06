@@ -616,10 +616,6 @@ private:
         ActiveASTContext->getTranslationUnitDecl())
       return false;
 
-    // For AST-nodes that don't have an identity, we can't memoize.
-    if (!Builder->isComparable())
-      return matchesAncestorOfRecursively(Node, Matcher, Builder, MatchMode);
-
     MatchKey Key;
     Key.MatcherID = Matcher.getID();
     Key.Node = Node;
@@ -634,34 +630,22 @@ private:
     }
 
     MemoizedMatchResult Result;
+    Result.ResultOfMatch = false;
     Result.Nodes = *Builder;
-    Result.ResultOfMatch =
-        matchesAncestorOfRecursively(Node, Matcher, &Result.Nodes, MatchMode);
 
-    MemoizedMatchResult &CachedResult = ResultCache[Key];
-    CachedResult = std::move(Result);
-
-    *Builder = CachedResult.Nodes;
-    return CachedResult.ResultOfMatch;
-  }
-
-  bool matchesAncestorOfRecursively(const ast_type_traits::DynTypedNode &Node,
-                                    const DynTypedMatcher &Matcher,
-                                    BoundNodesTreeBuilder *Builder,
-                                    AncestorMatchMode MatchMode) {
     const auto &Parents = ActiveASTContext->getParents(Node);
     assert(!Parents.empty() && "Found node that is not in the parent map.");
     if (Parents.size() == 1) {
       // Only one parent - do recursive memoization.
       const ast_type_traits::DynTypedNode Parent = Parents[0];
-      BoundNodesTreeBuilder BuilderCopy = *Builder;
-      if (Matcher.matches(Parent, this, &BuilderCopy)) {
-        *Builder = std::move(BuilderCopy);
-        return true;
-      }
-      if (MatchMode != ASTMatchFinder::AMM_ParentOnly) {
-        return memoizedMatchesAncestorOfRecursively(Parent, Matcher, Builder,
-                                                    MatchMode);
+      if (Matcher.matches(Parent, this, &Result.Nodes)) {
+        Result.ResultOfMatch = true;
+      } else if (MatchMode != ASTMatchFinder::AMM_ParentOnly) {
+        // Reset the results to not include the bound nodes from the failed
+        // match above.
+        Result.Nodes = *Builder;
+        Result.ResultOfMatch = memoizedMatchesAncestorOfRecursively(
+            Parent, Matcher, &Result.Nodes, MatchMode);
         // Once we get back from the recursive call, the result will be the
         // same as the parent's result.
       }
@@ -671,10 +655,10 @@ private:
       std::deque<ast_type_traits::DynTypedNode> Queue(Parents.begin(),
                                                       Parents.end());
       while (!Queue.empty()) {
-        BoundNodesTreeBuilder BuilderCopy = *Builder;
-        if (Matcher.matches(Queue.front(), this, &BuilderCopy)) {
-          *Builder = std::move(BuilderCopy);
-          return true;
+        Result.Nodes = *Builder;
+        if (Matcher.matches(Queue.front(), this, &Result.Nodes)) {
+          Result.ResultOfMatch = true;
+          break;
         }
         if (MatchMode != ASTMatchFinder::AMM_ParentOnly) {
           for (const auto &Parent :
@@ -689,7 +673,12 @@ private:
         Queue.pop_front();
       }
     }
-    return false;
+
+    MemoizedMatchResult &CachedResult = ResultCache[Key];
+    CachedResult = std::move(Result);
+
+    *Builder = CachedResult.Nodes;
+    return CachedResult.ResultOfMatch;
   }
 
   // Implements a BoundNodesTree::Visitor that calls a MatchCallback with

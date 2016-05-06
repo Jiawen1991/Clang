@@ -24,11 +24,10 @@ namespace DebugCXX {
           > class Template {
     T member;
   };
-  // Explicit template instantiation.
   extern template class Template<int>;
 
   extern template struct traits<float>;
-  typedef class Template<float> FloatInstantiation;
+  typedef class Template<float> FloatInstatiation;
 
   inline void fn() {
     Template<long> invisible;
@@ -49,7 +48,6 @@ namespace DebugCXX {
   template <typename...> class A;
   template <typename T> class A<T> {};
   typedef A<void> B;
-  // Anchored by a function parameter.
   void foo(B) {}
 }
 
@@ -85,13 +83,3 @@ class Derived : Base {
     Derived *getParent() const override;
   };
 };
-
-template <class T>
-class Template1 {
-  T t;
-};
-typedef Template1<void *> TypedefTemplate;
-extern template class Template1<int>;
-
-template <class T> class FwdDeclTemplate;
-typedef FwdDeclTemplate<int> TypedefFwdDeclTemplate;

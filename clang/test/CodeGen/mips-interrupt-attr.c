@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple mipsel-unknown-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple mipsel-unknown-linux -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK
 
 void __attribute__ ((interrupt("vector=sw0")))
 isr_sw0 (void)

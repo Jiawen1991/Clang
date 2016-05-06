@@ -37,8 +37,8 @@ public:
 // If 'FindResultVerifier' is NULL, sets *Verified to true when Run is called.
 class VerifyMatch : public MatchFinder::MatchCallback {
 public:
-  VerifyMatch(std::unique_ptr<BoundNodesCallback> FindResultVerifier, bool *Verified)
-      : Verified(Verified), FindResultReviewer(std::move(FindResultVerifier)) {}
+  VerifyMatch(BoundNodesCallback *FindResultVerifier, bool *Verified)
+      : Verified(Verified), FindResultReviewer(FindResultVerifier) {}
 
   void run(const MatchFinder::MatchResult &Result) override {
     if (FindResultReviewer != nullptr) {
@@ -55,7 +55,7 @@ public:
 
 private:
   bool *const Verified;
-  const std::unique_ptr<BoundNodesCallback> FindResultReviewer;
+  BoundNodesCallback *const FindResultReviewer;
 };
 
 template <typename T>
@@ -222,11 +222,12 @@ testing::AssertionResult notMatchesWithCuda(const std::string &Code,
 template <typename T>
 testing::AssertionResult
 matchAndVerifyResultConditionally(const std::string &Code, const T &AMatcher,
-                                  std::unique_ptr<BoundNodesCallback> FindResultVerifier,
+                                  BoundNodesCallback *FindResultVerifier,
                                   bool ExpectResult) {
+  std::unique_ptr<BoundNodesCallback> ScopedVerifier(FindResultVerifier);
   bool VerifiedResult = false;
   MatchFinder Finder;
-  VerifyMatch VerifyVerifiedResult(std::move(FindResultVerifier), &VerifiedResult);
+  VerifyMatch VerifyVerifiedResult(FindResultVerifier, &VerifiedResult);
   Finder.addMatcher(AMatcher, &VerifyVerifiedResult);
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory(&Finder));
@@ -265,17 +266,17 @@ matchAndVerifyResultConditionally(const std::string &Code, const T &AMatcher,
 template <typename T>
 testing::AssertionResult
 matchAndVerifyResultTrue(const std::string &Code, const T &AMatcher,
-                         std::unique_ptr<BoundNodesCallback> FindResultVerifier) {
+                         BoundNodesCallback *FindResultVerifier) {
   return matchAndVerifyResultConditionally(
-      Code, AMatcher, std::move(FindResultVerifier), true);
+      Code, AMatcher, FindResultVerifier, true);
 }
 
 template <typename T>
 testing::AssertionResult
 matchAndVerifyResultFalse(const std::string &Code, const T &AMatcher,
-                          std::unique_ptr<BoundNodesCallback> FindResultVerifier) {
+                          BoundNodesCallback *FindResultVerifier) {
   return matchAndVerifyResultConditionally(
-      Code, AMatcher, std::move(FindResultVerifier), false);
+      Code, AMatcher, FindResultVerifier, false);
 }
 
 } // end namespace ast_matchers

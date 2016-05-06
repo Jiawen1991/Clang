@@ -83,15 +83,7 @@ public:
   /// \c true if this line starts with the given tokens in order, ignoring
   /// comments.
   template <typename... Ts> bool startsWith(Ts... Tokens) const {
-    return startsWithInternal(First, Tokens...);
-  }
-
-  /// \c true if this line ends with the given tokens in reversed order,
-  /// ignoring comments.
-  /// For example, given tokens [T1, T2, T3, ...], the function returns true if
-  /// this line is like "... T3 T2 T1".
-  template <typename... Ts> bool endsWith(Ts... Tokens) const {
-    return endsWithInternal(Last, Tokens...);
+    return startsWith(First, Tokens...);
   }
 
   /// \c true if this line looks like a function definition instead of a
@@ -132,41 +124,15 @@ private:
   void operator=(const AnnotatedLine &) = delete;
 
   template <typename A, typename... Ts>
-  bool startsWithInternal(const FormatToken *Tok, A K1) const {
-    // Even though we skip comments in the outer `startWithInternal` function,
-    // this loop is still necessary if it is invoked by the public interface
-    // `startsWith`.
+  bool startsWith(FormatToken *Tok, A K1) const {
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Next;
     return Tok && Tok->is(K1);
   }
 
   template <typename A, typename... Ts>
-  bool startsWithInternal(const FormatToken *Tok, A K1, Ts... Tokens) const {
-    // Skip comments before calling `startsWithInternal(Tok, K1)` so that  the
-    // second call to `startsWithInternal` takes the correct `Tok->Next`, which
-    // should be the next token of the token checked in the first call.
-    while (Tok && Tok->is(tok::comment))
-      Tok = Tok->Next;
-    return Tok && startsWithInternal(Tok, K1) &&
-           startsWithInternal(Tok->Next, Tokens...);
-  }
-
-  template <typename A, typename... Ts>
-  bool endsWithInternal(const FormatToken *Tok, A K1) const {
-    // See the comments above in `startsWithInternal(Tok, K1)`.
-    while (Tok && Tok->is(tok::comment))
-      Tok = Tok->Previous;
-    return Tok && Tok->is(K1);
-  }
-
-  template <typename A, typename... Ts>
-  bool endsWithInternal(const FormatToken *Tok, A K1, Ts... Tokens) const {
-    // See the comments above in `startsWithInternal(Tok, K1, Tokens)`.
-    while (Tok && Tok->is(tok::comment))
-      Tok = Tok->Previous;
-    return Tok && endsWithInternal(Tok, K1) &&
-           endsWithInternal(Tok->Previous, Tokens...);
+  bool startsWith(FormatToken *Tok, A K1, Ts... Tokens) const {
+    return startsWith(Tok, K1) && startsWith(Tok->Next, Tokens...);
   }
 };
 

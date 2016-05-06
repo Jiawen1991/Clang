@@ -708,19 +708,6 @@ TEST(DeclarationMatcher, HasDescendantMemoizationUsesRestrictKind) {
                       decl(anyOf(hasDescendant(RD), hasDescendant(VD)))));
 }
 
-TEST(DeclarationMatcher, HasAncestorMemoization) {
-  // This triggers an hasAncestor with a TemplateArgument in the bound nodes.
-  // That node can't be memoized so we have to check for it before trying to put
-  // it on the cache.
-  DeclarationMatcher CannotMemoize = classTemplateSpecializationDecl(
-      hasAnyTemplateArgument(templateArgument().bind("targ")),
-      forEach(fieldDecl(hasAncestor(forStmt()))));
-
-  EXPECT_TRUE(notMatches("template <typename T> struct S;"
-                         "template <> struct S<int>{ int i; int j; };",
-                         CannotMemoize));
-}
-
 TEST(DeclarationMatcher, HasAttr) {
   EXPECT_TRUE(matches("struct __attribute__((warn_unused)) X {};",
                       decl(hasAttr(clang::attr::WarnUnused))));
@@ -830,7 +817,7 @@ TEST(HasDescendant, MatchesDescendantTypes) {
       "void f() { int a; float c; int d; int e; }",
       functionDecl(forEachDescendant(
           varDecl(hasDescendant(isInteger())).bind("x"))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 3)));
+      new VerifyIdIsBoundTo<Decl>("x", 3)));
 }
 
 TEST(HasDescendant, MatchesDescendantsOfTypes) {
@@ -845,7 +832,7 @@ TEST(HasDescendant, MatchesDescendantsOfTypes) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { int*** i; }",
       qualType(asString("int ***"), forEachDescendant(pointerType().bind("x"))),
-      llvm::make_unique<VerifyIdIsBoundTo<Type>>("x", 2)));
+      new VerifyIdIsBoundTo<Type>("x", 2)));
 }
 
 TEST(Has, MatchesChildrenOfTypes) {
@@ -856,7 +843,7 @@ TEST(Has, MatchesChildrenOfTypes) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "int (*f)(float, int);",
       qualType(functionType(), forEach(qualType(isInteger()).bind("x"))),
-      llvm::make_unique<VerifyIdIsBoundTo<QualType>>("x", 2)));
+      new VerifyIdIsBoundTo<QualType>("x", 2)));
 }
 
 TEST(Has, MatchesChildTypes) {
@@ -989,24 +976,24 @@ TEST(Matcher, BindMatchedNodes) {
   DeclarationMatcher ClassX = has(recordDecl(hasName("::X")).bind("x"));
 
   EXPECT_TRUE(matchAndVerifyResultTrue("class X {};",
-      ClassX, llvm::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("x")));
+      ClassX, new VerifyIdIsBoundTo<CXXRecordDecl>("x")));
 
   EXPECT_TRUE(matchAndVerifyResultFalse("class X {};",
-      ClassX, llvm::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("other-id")));
+      ClassX, new VerifyIdIsBoundTo<CXXRecordDecl>("other-id")));
 
   TypeMatcher TypeAHasClassB = hasDeclaration(
       recordDecl(hasName("A"), has(recordDecl(hasName("B")).bind("b"))));
 
   EXPECT_TRUE(matchAndVerifyResultTrue("class A { public: A *a; class B {}; };",
       TypeAHasClassB,
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("b")));
+      new VerifyIdIsBoundTo<Decl>("b")));
 
   StatementMatcher MethodX =
       callExpr(callee(cxxMethodDecl(hasName("x")))).bind("x");
 
   EXPECT_TRUE(matchAndVerifyResultTrue("class A { void x() { x(); } };",
       MethodX,
-      llvm::make_unique<VerifyIdIsBoundTo<CXXMemberCallExpr>>("x")));
+      new VerifyIdIsBoundTo<CXXMemberCallExpr>("x")));
 }
 
 TEST(Matcher, BindTheSameNameInAlternatives) {
@@ -1023,7 +1010,7 @@ TEST(Matcher, BindTheSameNameInAlternatives) {
       // The second branch binds x to f() and succeeds.
       "int f() { return 0 + f(); }",
       matcher,
-      llvm::make_unique<VerifyIdIsBoundTo<CallExpr>>("x")));
+      new VerifyIdIsBoundTo<CallExpr>("x")));
 }
 
 TEST(Matcher, BindsIDForMemoizedResults) {
@@ -1035,7 +1022,7 @@ TEST(Matcher, BindsIDForMemoizedResults) {
       DeclarationMatcher(anyOf(
           recordDecl(hasName("A"), hasDescendant(ClassX)),
           recordDecl(hasName("B"), hasDescendant(ClassX)))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 2)));
+      new VerifyIdIsBoundTo<Decl>("x", 2)));
 }
 
 TEST(HasDeclaration, HasDeclarationOfEnumType) {
@@ -1313,7 +1300,7 @@ TEST(Matcher, NestedOverloadedOperatorCalls) {
       "Y& operator&&(Y& x, Y& y) { return x; }; "
       "Y a; Y b; Y c; Y d = a && b && c;",
       cxxOperatorCallExpr(hasOverloadedOperatorName("&&")).bind("x"),
-      llvm::make_unique<VerifyIdIsBoundTo<CXXOperatorCallExpr>>("x", 2)));
+      new VerifyIdIsBoundTo<CXXOperatorCallExpr>("x", 2)));
   EXPECT_TRUE(matches("class Y { }; "
                       "Y& operator&&(Y& x, Y& y) { return x; }; "
                       "Y a; Y b; Y c; Y d = a && b && c;",
@@ -1694,7 +1681,7 @@ TEST(ForEachArgumentWithParam, MatchesCXXMemberCallExpr) {
       "  int y = 1;"
       "  S1[y];"
       "}",
-      CallExpr, llvm::make_unique<VerifyIdIsBoundTo<ParmVarDecl>>("param", 1)));
+      CallExpr, new VerifyIdIsBoundTo<ParmVarDecl>("param", 1)));
 
   StatementMatcher CallExpr2 =
       callExpr(forEachArgumentWithParam(ArgumentY, IntParam));
@@ -1706,7 +1693,7 @@ TEST(ForEachArgumentWithParam, MatchesCXXMemberCallExpr) {
       "  int y = 1;"
       "  S::g(y);"
       "}",
-      CallExpr2, llvm::make_unique<VerifyIdIsBoundTo<ParmVarDecl>>("param", 1)));
+      CallExpr2, new VerifyIdIsBoundTo<ParmVarDecl>("param", 1)));
 }
 
 TEST(ForEachArgumentWithParam, MatchesCallExpr) {
@@ -1718,19 +1705,17 @@ TEST(ForEachArgumentWithParam, MatchesCallExpr) {
 
   EXPECT_TRUE(
       matchAndVerifyResultTrue("void f(int i) { int y; f(y); }", CallExpr,
-                               llvm::make_unique<VerifyIdIsBoundTo<ParmVarDecl>>(
-                                   "param")));
+                               new VerifyIdIsBoundTo<ParmVarDecl>("param")));
   EXPECT_TRUE(
       matchAndVerifyResultTrue("void f(int i) { int y; f(y); }", CallExpr,
-                               llvm::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>(
-                                   "arg")));
+                               new VerifyIdIsBoundTo<DeclRefExpr>("arg")));
 
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f(int i, int j) { int y; f(y, y); }", CallExpr,
-      llvm::make_unique<VerifyIdIsBoundTo<ParmVarDecl>>("param", 2)));
+      new VerifyIdIsBoundTo<ParmVarDecl>("param", 2)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f(int i, int j) { int y; f(y, y); }", CallExpr,
-      llvm::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("arg", 2)));
+      new VerifyIdIsBoundTo<DeclRefExpr>("arg", 2)));
 }
 
 TEST(ForEachArgumentWithParam, MatchesConstructExpr) {
@@ -1746,8 +1731,7 @@ TEST(ForEachArgumentWithParam, MatchesConstructExpr) {
       "};"
       "int y = 0;"
       "C Obj(y);",
-      ConstructExpr,
-      llvm::make_unique<VerifyIdIsBoundTo<ParmVarDecl>>("param")));
+      ConstructExpr, new VerifyIdIsBoundTo<ParmVarDecl>("param")));
 }
 
 TEST(ForEachArgumentWithParam, HandlesBoundNodesForNonMatches) {
@@ -1764,7 +1748,7 @@ TEST(ForEachArgumentWithParam, HandlesBoundNodesForNonMatches) {
           forEachDescendant(varDecl().bind("v")),
           forEachDescendant(callExpr(forEachArgumentWithParam(
               declRefExpr(to(decl(equalsBoundNode("v")))), parmVarDecl())))),
-      llvm::make_unique<VerifyIdIsBoundTo<VarDecl>>("v", 4)));
+      new VerifyIdIsBoundTo<VarDecl>("v", 4)));
 }
 
 TEST(Matcher, ArgumentCount) {
@@ -3149,13 +3133,13 @@ TEST(AstMatcherPMacro, Works) {
   DeclarationMatcher HasClassB = just(has(recordDecl(hasName("B")).bind("b")));
 
   EXPECT_TRUE(matchAndVerifyResultTrue("class A { class B {}; };",
-      HasClassB, llvm::make_unique<VerifyIdIsBoundTo<Decl>>("b")));
+      HasClassB, new VerifyIdIsBoundTo<Decl>("b")));
 
   EXPECT_TRUE(matchAndVerifyResultFalse("class A { class B {}; };",
-      HasClassB, llvm::make_unique<VerifyIdIsBoundTo<Decl>>("a")));
+      HasClassB, new VerifyIdIsBoundTo<Decl>("a")));
 
   EXPECT_TRUE(matchAndVerifyResultFalse("class A { class C {}; };",
-      HasClassB, llvm::make_unique<VerifyIdIsBoundTo<Decl>>("b")));
+      HasClassB, new VerifyIdIsBoundTo<Decl>("b")));
 }
 
 AST_POLYMORPHIC_MATCHER_P(polymorphicHas,
@@ -3172,13 +3156,13 @@ TEST(AstPolymorphicMatcherPMacro, Works) {
       polymorphicHas(recordDecl(hasName("B")).bind("b"));
 
   EXPECT_TRUE(matchAndVerifyResultTrue("class A { class B {}; };",
-      HasClassB, llvm::make_unique<VerifyIdIsBoundTo<Decl>>("b")));
+      HasClassB, new VerifyIdIsBoundTo<Decl>("b")));
 
   EXPECT_TRUE(matchAndVerifyResultFalse("class A { class B {}; };",
-      HasClassB, llvm::make_unique<VerifyIdIsBoundTo<Decl>>("a")));
+      HasClassB, new VerifyIdIsBoundTo<Decl>("a")));
 
   EXPECT_TRUE(matchAndVerifyResultFalse("class A { class C {}; };",
-      HasClassB, llvm::make_unique<VerifyIdIsBoundTo<Decl>>("b")));
+      HasClassB, new VerifyIdIsBoundTo<Decl>("b")));
 
   StatementMatcher StatementHasClassB =
       polymorphicHas(recordDecl(hasName("B")));
@@ -3917,7 +3901,7 @@ TEST(SwitchCase, MatchesEachCase) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void x() { switch (42) { case 1: case 2: case 3: default:; } }",
       switchStmt(forEachSwitchCase(caseStmt().bind("x"))),
-      llvm::make_unique<VerifyIdIsBoundTo<CaseStmt>>("x", 3)));
+      new VerifyIdIsBoundTo<CaseStmt>("x", 3)));
 }
 
 TEST(ForEachConstructorInitializer, MatchesInitializers) {
@@ -3971,13 +3955,13 @@ TEST(HasConditionVariableStatement, MatchesConditionVariables) {
 TEST(ForEach, BindsOneNode) {
   EXPECT_TRUE(matchAndVerifyResultTrue("class C { int x; };",
       recordDecl(hasName("C"), forEach(fieldDecl(hasName("x")).bind("x"))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("x", 1)));
+      new VerifyIdIsBoundTo<FieldDecl>("x", 1)));
 }
 
 TEST(ForEach, BindsMultipleNodes) {
   EXPECT_TRUE(matchAndVerifyResultTrue("class C { int x; int y; int z; };",
       recordDecl(hasName("C"), forEach(fieldDecl().bind("f"))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("f", 3)));
+      new VerifyIdIsBoundTo<FieldDecl>("f", 3)));
 }
 
 TEST(ForEach, BindsRecursiveCombinations) {
@@ -3985,14 +3969,14 @@ TEST(ForEach, BindsRecursiveCombinations) {
       "class C { class D { int x; int y; }; class E { int y; int z; }; };",
       recordDecl(hasName("C"),
                  forEach(recordDecl(forEach(fieldDecl().bind("f"))))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("f", 4)));
+      new VerifyIdIsBoundTo<FieldDecl>("f", 4)));
 }
 
 TEST(ForEachDescendant, BindsOneNode) {
   EXPECT_TRUE(matchAndVerifyResultTrue("class C { class D { int x; }; };",
       recordDecl(hasName("C"),
                  forEachDescendant(fieldDecl(hasName("x")).bind("x"))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("x", 1)));
+      new VerifyIdIsBoundTo<FieldDecl>("x", 1)));
 }
 
 TEST(ForEachDescendant, NestedForEachDescendant) {
@@ -4001,7 +3985,7 @@ TEST(ForEachDescendant, NestedForEachDescendant) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
     "class A { class B { class C {}; }; };",
     recordDecl(hasName("A"), anyOf(m, forEachDescendant(m))),
-    llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", "C")));
+    new VerifyIdIsBoundTo<Decl>("x", "C")));
 
   // Check that a partial match of 'm' that binds 'x' in the
   // first part of anyOf(m, anything()) will not overwrite the
@@ -4009,7 +3993,7 @@ TEST(ForEachDescendant, NestedForEachDescendant) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A { class B { class C {}; }; };",
       recordDecl(hasName("A"), allOf(hasDescendant(m), anyOf(m, anything()))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", "C")));
+      new VerifyIdIsBoundTo<Decl>("x", "C")));
 }
 
 TEST(ForEachDescendant, BindsMultipleNodes) {
@@ -4017,7 +4001,7 @@ TEST(ForEachDescendant, BindsMultipleNodes) {
       "class C { class D { int x; int y; }; "
       "          class E { class F { int y; int z; }; }; };",
       recordDecl(hasName("C"), forEachDescendant(fieldDecl().bind("f"))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("f", 4)));
+      new VerifyIdIsBoundTo<FieldDecl>("f", 4)));
 }
 
 TEST(ForEachDescendant, BindsRecursiveCombinations) {
@@ -4026,7 +4010,7 @@ TEST(ForEachDescendant, BindsRecursiveCombinations) {
       "          class E { class F { class G { int y; int z; }; }; }; }; };",
       recordDecl(hasName("C"), forEachDescendant(recordDecl(
           forEachDescendant(fieldDecl().bind("f"))))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("f", 8)));
+      new VerifyIdIsBoundTo<FieldDecl>("f", 8)));
 }
 
 TEST(ForEachDescendant, BindsCombinations) {
@@ -4035,13 +4019,13 @@ TEST(ForEachDescendant, BindsCombinations) {
       "(true) {} }",
       compoundStmt(forEachDescendant(ifStmt().bind("if")),
                    forEachDescendant(whileStmt().bind("while"))),
-      llvm::make_unique<VerifyIdIsBoundTo<IfStmt>>("if", 6)));
+      new VerifyIdIsBoundTo<IfStmt>("if", 6)));
 }
 
 TEST(Has, DoesNotDeleteBindings) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class X { int a; };", recordDecl(decl().bind("x"), has(fieldDecl())),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
 }
 
 TEST(LoopingMatchers, DoNotOverwritePreviousMatchResultOnFailure) {
@@ -4069,100 +4053,100 @@ TEST(LoopingMatchers, DoNotOverwritePreviousMatchResultOnFailure) {
       recordDecl(
           recordDecl().bind("x"), hasName("::X"),
           anyOf(forEachDescendant(recordDecl(hasName("Y"))), anything())),
-      llvm::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("x", 1)));
+      new VerifyIdIsBoundTo<CXXRecordDecl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class X {};", recordDecl(recordDecl().bind("x"), hasName("::X"),
                                 anyOf(unless(anything()), anything())),
-      llvm::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("x", 1)));
+      new VerifyIdIsBoundTo<CXXRecordDecl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "template<typename T1, typename T2> class X {}; X<float, int> x;",
       classTemplateSpecializationDecl(
           decl().bind("x"),
           hasAnyTemplateArgument(refersToType(asString("int")))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class X { void f(); void g(); };",
       cxxRecordDecl(decl().bind("x"), hasMethod(hasName("g"))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class X { X() : a(1), b(2) {} double a; int b; };",
       recordDecl(decl().bind("x"),
                  has(cxxConstructorDecl(
                      hasAnyConstructorInitializer(forField(hasName("b")))))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void x(int, int) { x(0, 42); }",
       callExpr(expr().bind("x"), hasAnyArgument(integerLiteral(equals(42)))),
-      llvm::make_unique<VerifyIdIsBoundTo<Expr>>("x", 1)));
+      new VerifyIdIsBoundTo<Expr>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void x(int, int y) {}",
       functionDecl(decl().bind("x"), hasAnyParameter(hasName("y"))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void x() { return; if (true) {} }",
       functionDecl(decl().bind("x"),
                    has(compoundStmt(hasAnySubstatement(ifStmt())))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "namespace X { void b(int); void b(); }"
       "using X::b;",
       usingDecl(decl().bind("x"), hasAnyUsingShadowDecl(hasTargetDecl(
                                       functionDecl(parameterCountIs(1))))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A{}; class B{}; class C : B, A {};",
       cxxRecordDecl(decl().bind("x"), isDerivedFrom("::A")),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A{}; typedef A B; typedef A C; typedef A D;"
       "class E : A {};",
       cxxRecordDecl(decl().bind("x"), isDerivedFrom("C")),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A { class B { void f() {} }; };",
       functionDecl(decl().bind("x"), hasAncestor(recordDecl(hasName("::A")))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "template <typename T> struct A { struct B {"
       "  void f() { if(true) {} }"
       "}; };"
       "void t() { A<int>::B b; b.f(); }",
       ifStmt(stmt().bind("x"), hasAncestor(recordDecl(hasName("::A")))),
-      llvm::make_unique<VerifyIdIsBoundTo<Stmt>>("x", 2)));
+      new VerifyIdIsBoundTo<Stmt>("x", 2)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A {};",
       recordDecl(hasName("::A"), decl().bind("x"), unless(hasName("fooble"))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A { A() : s(), i(42) {} const char *s; int i; };",
       cxxConstructorDecl(hasName("::A::A"), decl().bind("x"),
                          forEachConstructorInitializer(forField(hasName("i")))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      new VerifyIdIsBoundTo<Decl>("x", 1)));
 }
 
 TEST(ForEachDescendant, BindsCorrectNodes) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class C { void f(); int i; };",
       recordDecl(hasName("C"), forEachDescendant(decl().bind("decl"))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("decl", 1)));
+      new VerifyIdIsBoundTo<FieldDecl>("decl", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class C { void f() {} int i; };",
       recordDecl(hasName("C"), forEachDescendant(decl().bind("decl"))),
-      llvm::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("decl", 1)));
+      new VerifyIdIsBoundTo<FunctionDecl>("decl", 1)));
 }
 
 TEST(FindAll, BindsNodeOnMatch) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A {};",
       recordDecl(hasName("::A"), findAll(recordDecl(hasName("::A")).bind("v"))),
-      llvm::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("v", 1)));
+      new VerifyIdIsBoundTo<CXXRecordDecl>("v", 1)));
 }
 
 TEST(FindAll, BindsDescendantNodeOnMatch) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A { int a; int b; };",
       recordDecl(hasName("::A"), findAll(fieldDecl().bind("v"))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 2)));
+      new VerifyIdIsBoundTo<FieldDecl>("v", 2)));
 }
 
 TEST(FindAll, BindsNodeAndDescendantNodesOnOneMatch) {
@@ -4171,12 +4155,12 @@ TEST(FindAll, BindsNodeAndDescendantNodesOnOneMatch) {
       recordDecl(hasName("::A"),
                  findAll(decl(anyOf(recordDecl(hasName("::A")).bind("v"),
                                     fieldDecl().bind("v"))))),
-      llvm::make_unique<VerifyIdIsBoundTo<Decl>>("v", 3)));
+      new VerifyIdIsBoundTo<Decl>("v", 3)));
 
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A { class B {}; class C {}; };",
       recordDecl(hasName("::A"), findAll(recordDecl(isDefinition()).bind("v"))),
-      llvm::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("v", 3)));
+      new VerifyIdIsBoundTo<CXXRecordDecl>("v", 3)));
 }
 
 TEST(EachOf, TriggersForEachMatch) {
@@ -4184,7 +4168,7 @@ TEST(EachOf, TriggersForEachMatch) {
       "class A { int a; int b; };",
       recordDecl(eachOf(has(fieldDecl(hasName("a")).bind("v")),
                         has(fieldDecl(hasName("b")).bind("v")))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 2)));
+      new VerifyIdIsBoundTo<FieldDecl>("v", 2)));
 }
 
 TEST(EachOf, BehavesLikeAnyOfUnlessBothMatch) {
@@ -4192,12 +4176,12 @@ TEST(EachOf, BehavesLikeAnyOfUnlessBothMatch) {
       "class A { int a; int c; };",
       recordDecl(eachOf(has(fieldDecl(hasName("a")).bind("v")),
                         has(fieldDecl(hasName("b")).bind("v")))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 1)));
+      new VerifyIdIsBoundTo<FieldDecl>("v", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A { int c; int b; };",
       recordDecl(eachOf(has(fieldDecl(hasName("a")).bind("v")),
                         has(fieldDecl(hasName("b")).bind("v")))),
-      llvm::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 1)));
+      new VerifyIdIsBoundTo<FieldDecl>("v", 1)));
   EXPECT_TRUE(notMatches(
       "class A { int c; int d; };",
       recordDecl(eachOf(has(fieldDecl(hasName("a")).bind("v")),
@@ -4413,7 +4397,7 @@ TEST(HasAncestor, BindsRecursiveCombinations) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class C { class D { class E { class F { int y; }; }; }; };",
       fieldDecl(hasAncestor(recordDecl(hasAncestor(recordDecl().bind("r"))))),
-      llvm::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("r", 1)));
+      new VerifyIdIsBoundTo<CXXRecordDecl>("r", 1)));
 }
 
 TEST(HasAncestor, BindsCombinationsWithHasDescendant) {
@@ -4425,7 +4409,7 @@ TEST(HasAncestor, BindsCombinationsWithHasDescendant) {
                                      hasAncestor(recordDecl())))
           ).bind("d")
       )),
-      llvm::make_unique<VerifyIdIsBoundTo<CXXRecordDecl>>("d", "E")));
+      new VerifyIdIsBoundTo<CXXRecordDecl>("d", "E")));
 }
 
 TEST(HasAncestor, MatchesClosestAncestor) {
@@ -4439,7 +4423,7 @@ TEST(HasAncestor, MatchesClosestAncestor) {
       varDecl(hasName("x"),
               hasAncestor(functionDecl(hasParameter(
                   0, varDecl(hasType(asString("int"))))).bind("f"))).bind("v"),
-      llvm::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("f", "g", 2)));
+      new VerifyIdIsBoundTo<FunctionDecl>("f", "g", 2)));
 }
 
 TEST(HasAncestor, MatchesInTemplateInstantiations) {
@@ -4577,7 +4561,7 @@ TEST(HasParent, NoDuplicateParents) {
   EXPECT_FALSE(matchAndVerifyResultTrue(
       "template <typename T> int Foo() { return 1 + 2; }\n"
       "int x = Foo<int>() + Foo<unsigned>();",
-      stmt().bind("node"), llvm::make_unique<HasDuplicateParents>()));
+      stmt().bind("node"), new HasDuplicateParents()));
 }
 
 TEST(TypeMatching, MatchesTypes) {
@@ -4752,11 +4736,11 @@ TEST(TypeMatching, PointerTypes) {
   //EXPECT_TRUE(matchAndVerifyResultTrue(
   //    "int* a;",
   //    pointerTypeLoc(pointeeLoc(typeLoc().bind("loc"))),
-  //    llvm::make_unique<VerifyIdIsBoundTo<TypeLoc>>("loc", 1)));
+  //    new VerifyIdIsBoundTo<TypeLoc>("loc", 1)));
   //EXPECT_TRUE(matchAndVerifyResultTrue(
   //    "int* a;",
   //    pointerTypeLoc().bind("loc"),
-  //    llvm::make_unique<VerifyIdIsBoundTo<TypeLoc>>("loc", 1)));
+  //    new VerifyIdIsBoundTo<TypeLoc>("loc", 1)));
   EXPECT_TRUE(matches(
       "int** a;",
       loc(pointerType(pointee(qualType())))));
@@ -5014,15 +4998,14 @@ TEST(NNS, BindsNestedNameSpecifiers) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "namespace ns { struct E { struct B {}; }; } ns::E::B b;",
       nestedNameSpecifier(specifiesType(asString("struct ns::E"))).bind("nns"),
-      llvm::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>(
-          "nns", "ns::struct E::")));
+      new VerifyIdIsBoundTo<NestedNameSpecifier>("nns", "ns::struct E::")));
 }
 
 TEST(NNS, BindsNestedNameSpecifierLocs) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "namespace ns { struct B {}; } ns::B b;",
       loc(nestedNameSpecifier()).bind("loc"),
-      llvm::make_unique<VerifyIdIsBoundTo<NestedNameSpecifierLoc>>("loc", 1)));
+      new VerifyIdIsBoundTo<NestedNameSpecifierLoc>("loc", 1)));
 }
 
 TEST(NNS, MatchesNestedNameSpecifierPrefixes) {
@@ -5061,7 +5044,7 @@ TEST(NNS, DescendantsOfNestedNameSpecifiers) {
       Fragment,
       nestedNameSpecifier(specifiesType(asString("struct a::A::B")),
                           forEach(nestedNameSpecifier().bind("x"))),
-      llvm::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>("x", 1)));
+      new VerifyIdIsBoundTo<NestedNameSpecifier>("x", 1)));
 }
 
 TEST(NNS, NestedNameSpecifiersAsDescendants) {
@@ -5077,7 +5060,7 @@ TEST(NNS, NestedNameSpecifiersAsDescendants) {
       functionDecl(hasName("f"),
                    forEachDescendant(nestedNameSpecifier().bind("x"))),
       // Nested names: a, a::A and a::A::B.
-      llvm::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>("x", 3)));
+      new VerifyIdIsBoundTo<NestedNameSpecifier>("x", 3)));
 }
 
 TEST(NNSLoc, DescendantsOfNestedNameSpecifierLocs) {
@@ -5104,7 +5087,7 @@ TEST(NNSLoc, DescendantsOfNestedNameSpecifierLocs) {
       Fragment,
       nestedNameSpecifierLoc(loc(specifiesType(asString("struct a::A::B"))),
                              forEach(nestedNameSpecifierLoc().bind("x"))),
-      llvm::make_unique<VerifyIdIsBoundTo<NestedNameSpecifierLoc>>("x", 1)));
+      new VerifyIdIsBoundTo<NestedNameSpecifierLoc>("x", 1)));
 }
 
 TEST(NNSLoc, NestedNameSpecifierLocsAsDescendants) {
@@ -5120,7 +5103,7 @@ TEST(NNSLoc, NestedNameSpecifierLocsAsDescendants) {
       functionDecl(hasName("f"),
                    forEachDescendant(nestedNameSpecifierLoc().bind("x"))),
       // Nested names: a, a::A and a::A::B.
-      llvm::make_unique<VerifyIdIsBoundTo<NestedNameSpecifierLoc>>("x", 3)));
+      new VerifyIdIsBoundTo<NestedNameSpecifierLoc>("x", 3)));
 }
 
 template <typename T> class VerifyMatchOnNode : public BoundNodesCallback {
@@ -5146,12 +5129,12 @@ private:
 TEST(MatchFinder, CanMatchDeclarationsRecursively) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class X { class Y {}; };", recordDecl(hasName("::X")).bind("X"),
-      llvm::make_unique<VerifyMatchOnNode<Decl>>(
+      new VerifyMatchOnNode<clang::Decl>(
           "X", decl(hasDescendant(recordDecl(hasName("X::Y")).bind("Y"))),
           "Y")));
   EXPECT_TRUE(matchAndVerifyResultFalse(
       "class X { class Y {}; };", recordDecl(hasName("::X")).bind("X"),
-      llvm::make_unique<VerifyMatchOnNode<Decl>>(
+      new VerifyMatchOnNode<clang::Decl>(
           "X", decl(hasDescendant(recordDecl(hasName("X::Z")).bind("Z"))),
           "Z")));
 }
@@ -5159,22 +5142,22 @@ TEST(MatchFinder, CanMatchDeclarationsRecursively) {
 TEST(MatchFinder, CanMatchStatementsRecursively) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { if (1) { for (;;) { } } }", ifStmt().bind("if"),
-      llvm::make_unique<VerifyMatchOnNode<Stmt>>(
+      new VerifyMatchOnNode<clang::Stmt>(
           "if", stmt(hasDescendant(forStmt().bind("for"))), "for")));
   EXPECT_TRUE(matchAndVerifyResultFalse(
       "void f() { if (1) { for (;;) { } } }", ifStmt().bind("if"),
-      llvm::make_unique<VerifyMatchOnNode<Stmt>>(
+      new VerifyMatchOnNode<clang::Stmt>(
           "if", stmt(hasDescendant(declStmt().bind("decl"))), "decl")));
 }
 
 TEST(MatchFinder, CanMatchSingleNodesRecursively) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class X { class Y {}; };", recordDecl(hasName("::X")).bind("X"),
-      llvm::make_unique<VerifyMatchOnNode<Decl>>(
+      new VerifyMatchOnNode<clang::Decl>(
           "X", recordDecl(has(recordDecl(hasName("X::Y")).bind("Y"))), "Y")));
   EXPECT_TRUE(matchAndVerifyResultFalse(
       "class X { class Y {}; };", recordDecl(hasName("::X")).bind("X"),
-      llvm::make_unique<VerifyMatchOnNode<Decl>>(
+      new VerifyMatchOnNode<clang::Decl>(
           "X", recordDecl(has(recordDecl(hasName("X::Z")).bind("Z"))), "Z")));
 }
 
@@ -5221,14 +5204,14 @@ public:
 TEST(IsEqualTo, MatchesNodesByIdentity) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class X { class Y {}; };", recordDecl(hasName("::X::Y")).bind(""),
-      llvm::make_unique<VerifyAncestorHasChildIsEqual<CXXRecordDecl>>()));
+      new VerifyAncestorHasChildIsEqual<CXXRecordDecl>()));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "void f() { if (true) if(true) {} }", ifStmt().bind(""),
-      llvm::make_unique<VerifyAncestorHasChildIsEqual<IfStmt>>()));
+      new VerifyAncestorHasChildIsEqual<IfStmt>()));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class X { class Y {} y; };",
       fieldDecl(hasName("y"), hasType(type().bind(""))).bind("decl"),
-      llvm::make_unique<VerifyAncestorHasChildIsEqual<Type>>()));
+      new VerifyAncestorHasChildIsEqual<Type>()));
 }
 
 TEST(MatchFinder, CheckProfiling) {
@@ -5383,7 +5366,7 @@ TEST(EqualsBoundNodeMatcher, UsingForEachDescendant) {
                    forEachDescendant(varDecl(hasType(
                        qualType(equalsBoundNode("type")))).bind("decl"))),
       // Only i and j should match, not k.
-      llvm::make_unique<VerifyIdIsBoundTo<VarDecl>>("decl", 2)));
+      new VerifyIdIsBoundTo<VarDecl>("decl", 2)));
 }
 
 TEST(EqualsBoundNodeMatcher, FiltersMatchedCombinations) {
@@ -5396,7 +5379,7 @@ TEST(EqualsBoundNodeMatcher, FiltersMatchedCombinations) {
       functionDecl(
           hasName("f"), forEachDescendant(varDecl().bind("d")),
           forEachDescendant(declRefExpr(to(decl(equalsBoundNode("d")))))),
-      llvm::make_unique<VerifyIdIsBoundTo<VarDecl>>("d", 5)));
+      new VerifyIdIsBoundTo<VarDecl>("d", 5)));
 }
 
 TEST(EqualsBoundNodeMatcher, UnlessDescendantsOfAncestorsMatch) {
@@ -5413,7 +5396,7 @@ TEST(EqualsBoundNodeMatcher, UnlessDescendantsOfAncestorsMatch) {
               callee(cxxMethodDecl(anyOf(hasName("size"), hasName("length")))),
               on(declRefExpr(to(varDecl(equalsBoundNode("var")))))))))))
           .bind("data"),
-      llvm::make_unique<VerifyIdIsBoundTo<Expr>>("data", 1)));
+      new VerifyIdIsBoundTo<Expr>("data", 1)));
 
   EXPECT_FALSE(matches(
       "struct StringRef { int size() const; const char* data() const; };"
